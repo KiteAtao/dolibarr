@@ -18,9 +18,11 @@
  * or see http://www.gnu.org/
  */
 
-
 // Variable $upload_dir must be defined when entering here
 // Variable $upload_dirold may also exists.
+
+//var_dump($upload_dir);
+//var_dump($upload_dirold);
 
 // Submit file/link
 if (GETPOST('sendit') && ! empty($conf->global->MAIN_UPLOAD_DOC))
@@ -40,7 +42,7 @@ elseif (GETPOST('linkit') && ! empty($conf->global->MAIN_UPLOAD_DOC))
         $link = GETPOST('link', 'alpha');
         if ($link)
         {
-            if (substr($link, 0, 7) != 'http://' && substr($link, 0, 8) != 'https://') {
+            if (substr($link, 0, 7) != 'http://' && substr($link, 0, 8) != 'https://' && substr($link, 0, 7) != 'file://') {
                 $link = 'http://' . $link;
             }
             dol_add_file_process($upload_dir, 0, 1, 'userfile', null, $link);
@@ -124,7 +126,7 @@ elseif ($action == 'confirm_updateline' && GETPOST('save') && GETPOST('link', 'a
     if ($f)
     {
         $link->url = GETPOST('link', 'alpha');
-        if (substr($link->url, 0, 7) != 'http://' && substr($link->url, 0, 8) != 'https://')
+        if (substr($link->url, 0, 7) != 'http://' && substr($link->url, 0, 8) != 'https://' && substr($link->url, 0, 7) != 'file://')
         {
             $link->url = 'http://' . $link->url;
         }
@@ -140,4 +142,37 @@ elseif ($action == 'confirm_updateline' && GETPOST('save') && GETPOST('link', 'a
         //error fetching
     }
 }
-
+elseif ($action == 'renamefile' && GETPOST('renamefilesave'))
+{
+    if ($object->id)
+    {
+        // For documents pages, upload_dir contains already path to file from module dir, so we clean path into urlfile.
+        //var_dump($upload_dir);exit;
+        if (! empty($upload_dir))
+        {
+            $filenamefrom=dol_sanitizeFileName(GETPOST('renamefilefrom'));
+            $filenameto=dol_sanitizeFileName(GETPOST('renamefileto'));
+            if ($filenamefrom && $filenameto)
+            {
+                $srcpath = $upload_dir.'/'.$filenamefrom;
+                $destpath = $upload_dir.'/'.$filenameto;
+    
+                $result = dol_move($srcpath, $destpath);
+                if ($result) 
+                {
+                    $object->addThumbs($destpath);
+                    
+                    // TODO Add revert function of addThumbs
+                    //$object->delThumbs($srcpath);
+                    
+                    setEventMessages($langs->trans("FileRenamed"), null);
+                }
+                else 
+                {
+                    $langs->load("errors"); // key must be loaded because we can't rely on loading during output, we need var substitution to be done now.
+                    setEventMessages($langs->trans("ErrorFailToRenameFile", $filenamefrom, $filenameto), null, 'errors');
+                }
+            }
+        }
+    }
+}

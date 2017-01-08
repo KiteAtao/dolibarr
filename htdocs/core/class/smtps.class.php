@@ -225,7 +225,8 @@ class SMTPs
 	var $log = '';
 	var $_errorsTo = '';
 	var $_deliveryReceipt = 0;
-    var $_trackId = '';
+	var $_trackId = '';
+	var $_moreInHeader = '';
 
 
     /**
@@ -261,15 +262,36 @@ class SMTPs
 	}
 
     /**
+     * Set moreInHeader
+     *
+     * @param	string		$_val		Value
+     * @return	void
+     */
+	function setMoreInHeader($_val = '')
+	{
+		$this->_moreinheader = $_val;
+	}
+	
+	/**
      * get trackid
      *
-     * @return	string		Delivery receipt
+     * @return	string		Track id
      */
 	function getTrackId()
 	{
 		return $this->_trackId;
 	}
 
+	/**
+	 * get moreInHeader
+	 *
+	 * @return	string		moreInHeader
+	 */
+	function getMoreInHeader()
+	{
+	    return $this->_moreinheader;
+	}
+	
     /**
      * Set errors to
      *
@@ -396,6 +418,11 @@ class SMTPs
 		$host=$this->getHost();
 		$host=preg_replace('@tcp://@i','',$host);	// Remove prefix
 		$host=preg_replace('@ssl://@i','',$host);	// Remove prefix
+		if (!empty($conf->global->MAIN_MAIL_EMAIL_STARTTLS))
+		{
+		    $host=preg_replace('@tls://@i','',$host);	// Remove prefix
+		    $host='tls://'.$host;
+		}
 		if ( $_retVal = $this->socket_send_str('EHLO ' . $host, '250') )
 		{
 			if (!empty($conf->global->MAIN_MAIL_EMAIL_STARTTLS))
@@ -1208,7 +1235,9 @@ class SMTPs
 		{
 			$_header .= 'Message-ID: <' . time() . '.SMTPs@' . $host . ">\r\n";
 		}
-
+		if ( $this->getMoreInHeader() )
+		    $_header .= $this->getMoreInHeader();     // Value must include the "\r\n";
+		
 		//$_header .=
 		//                 'Read-Receipt-To: '   . $this->getFrom( 'org' ) . "\r\n"
 		//                 'Return-Receipt-To: ' . $this->getFrom( 'org' ) . "\r\n";
@@ -1222,15 +1251,16 @@ class SMTPs
 
 		// DOL_CHANGE LDR
 		if ( $this->getDeliveryReceipt() )
-		$_header .= 'Disposition-Notification-To: '.$this->getFrom('addr') . "\r\n";
+		    $_header .= 'Disposition-Notification-To: '.$this->getFrom('addr') . "\r\n";
 		if ( $this->getErrorsTo() )
-		$_header .= 'Errors-To: '.$this->getErrorsTo('addr') . "\r\n";
+		    $_header .= 'Errors-To: '.$this->getErrorsTo('addr') . "\r\n";
 		if ( $this->getReplyTo() )
-        $_header .= "Reply-To: ".$this->getReplyTo('addr') ."\r\n";
+		    $_header .= "Reply-To: ".$this->getReplyTo('addr') ."\r\n";
 
-		$_header .= 'X-Mailer: Dolibarr version ' . DOL_VERSION .' (using SMTPs Mailer)'                   . "\r\n"
-		.  'Mime-Version: 1.0'                            . "\r\n";
+		$_header .= 'X-Mailer: Dolibarr version ' . DOL_VERSION .' (using SMTPs Mailer)' . "\r\n";
+		$_header .= 'Mime-Version: 1.0' . "\r\n";
 
+		
 		return $_header;
 	}
 

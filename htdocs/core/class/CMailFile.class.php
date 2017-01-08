@@ -54,6 +54,7 @@ class CMailFile
 	var $deliveryreceipt;
 
 	var $eol;
+	var $eol2;
 	var $atleastonefile=0;
 	var $error='';
 
@@ -103,7 +104,7 @@ class CMailFile
 	 *	@param 	string	$errors_to      	 Email for errors-to
 	 *	@param	string	$css                 Css option
 	 *	@param	string	$trackid             Tracking string
-	 *  @param  string  $moreinheader        More in header (for phpmail only for the moment)
+	 *  @param  string  $moreinheader        More in header. $moreinheader must contains the "\r\n" (TODO not supported for other MAIL_SEND_MODE different than 'phpmail' and 'smtps' for the moment)
 	 */
 	function __construct($subject,$to,$from,$msg,$filename_list=array(),$mimetype_list=array(),$mimefilename_list=array(),$addr_cc="",$addr_bcc="",$deliveryreceipt=0,$msgishtml=0,$errors_to='',$css='',$trackid='',$moreinheader='')
 	{
@@ -117,6 +118,7 @@ class CMailFile
 		{
 			$this->eol="\n";
 			$this->eol2="\n";
+			$moreinheader = str_replace("\r\n","\n",$moreinheader);
 		}
 
 		// On defini mixed_boundary
@@ -209,7 +211,7 @@ class CMailFile
 			$this->deliveryreceipt = $deliveryreceipt;
 			$this->trackid = $trackid;
 			$smtp_headers = $this->write_smtpheaders();
-            if (! empty($moreinheader)) $smtp_headers.=$moreinheader;
+            if (! empty($moreinheader)) $smtp_headers.=$moreinheader;   // $moreinheader contains the \r\n
             
 			// Define mime_headers
 			$mime_headers = $this->write_mimeheaders($filename_list, $mimefilename_list);
@@ -270,7 +272,8 @@ class CMailFile
 			$smtps->setFrom($this->getValidAddress($from,0,1));
 			$smtps->setTrackId($trackid);
 			$smtps->setReplyTo($this->getValidAddress($from,0,1));   // Set property with this->smtps->setReplyTo after constructor if you want to use another value than the From
-					
+			if (! empty($moreinheader)) $smtps->setMoreInHeader($moreinheader);
+			    
 			if (! empty($this->html))
 			{
 				if (!empty($css))
@@ -324,7 +327,8 @@ class CMailFile
 			$this->phpmailer->SetFrom($this->getValidAddress($from,0,1));
 			$this->phpmailer->SetReplyTo($this->getValidAddress($from,0,1));   // Set property with this->phpmailer->setReplyTo after constructor if you want to use another value than the From
 			// TODO Add trackid into smtp header
-
+			// TODO if (! empty($moreinheader)) ...
+					
 			if (! empty($this->html))
 			{
 				if (!empty($css))
@@ -377,7 +381,8 @@ class CMailFile
             $msgid = $headers->get('Message-ID');
             $msgid->setId($headerID);
             $headers->addIdHeader('References', $headerID);
-
+            // TODO if (! empty($moreinheader)) ...
+            
             // Give the message a subject
             $this->message->setSubject($this->encodetorfc2822($subject));
 
@@ -540,25 +545,28 @@ class CMailFile
 				}
 				else
 				{
-					$bounce = '';	// By default
+					$additionnalparam = '';	// By default
 					if (! empty($conf->global->MAIN_MAIL_ALLOW_SENDMAIL_F))
 					{
 						// le "Return-Path" (retour des messages bounced) dans les header ne fonctionne pas avec tous les MTA
 						// Le forcage de la valeur grace à l'option -f de sendmail est donc possible si la constante MAIN_MAIL_ALLOW_SENDMAIL_F est definie.
-						// La variable definie pose des pb avec certains sendmail securisee (option -f refusee car dangereuse)
-						$bounce .= ($bounce?' ':'').(! empty($conf->global->MAIN_MAIL_ERRORS_TO) ? '-f' . $this->getValidAddress($conf->global->MAIN_MAIL_ERRORS_TO,2) : ($this->addr_from != '' ? '-f' . $this->getValidAddress($this->addr_from,2) : '') );
+						// Having this variable defined may create problems with some sendmail (option -f refused)
+						// Having this variable not defined may create problems with some other sendmail (option -f required)
+						$additionnalparam .= ($additionnalparam?' ':'').(! empty($conf->global->MAIN_MAIL_ERRORS_TO) ? '-f' . $this->getValidAddress($conf->global->MAIN_MAIL_ERRORS_TO,2) : ($this->addr_from != '' ? '-f' . $this->getValidAddress($this->addr_from,2) : '') );
 					}
                     if (! empty($conf->global->MAIN_MAIL_SENDMAIL_FORCE_BA))    // To force usage of -ba option. This option tells sendmail to read From: or Sender: to setup sender
                     {
-                        $bounce .= ($bounce?' ':'').'-ba';
+                        $additionnalparam .= ($additionnalparam?' ':'').'-ba';
                     }
-                    dol_syslog("CMailFile::sendfile: mail start HOST=".ini_get('SMTP').", PORT=".ini_get('smtp_port').", additionnal_parameters=".$bounce, LOG_DEBUG);
+                    if (! empty($conf->global->MAIN_MAIL_SENDMAIL_FORCE_ADDPARAM)) $additionnalparam .= ($additionnalparam?' ':'').'-U '.$additionnalparam; // Use -U to add additionnal params
+                    
+                    dol_syslog("CMailFile::sendfile: mail start HOST=".ini_get('SMTP').", PORT=".ini_get('smtp_port').", additionnal_parameters=".$additionnalparam, LOG_DEBUG);
                     
 					$this->message=stripslashes($this->message);
 
 					if (! empty($conf->global->MAIN_MAIL_DEBUG)) $this->dump_mail();
 
-					if (! empty($bounce)) $res = mail($dest,$this->encodetorfc2822($this->subject),$this->message,$this->headers, $bounce);
+					if (! empty($additionnalparam)) $res = mail($dest, $this->encodetorfc2822($this->subject), $this->message, $this->headers, $additionnalparam);
 					else $res = mail($dest, $this->encodetorfc2822($this->subject), $this->message, $this->headers);
 
 					if (! $res)
@@ -723,7 +731,7 @@ class CMailFile
 	 * @param string $stringtoencode String to encode
 	 * @return string                string encoded
 	 */
-	function encodetorfc2822($stringtoencode)
+	static function encodetorfc2822($stringtoencode)
 	{
 		global $conf;
 		return '=?'.$conf->file->character_set_client.'?B?'.base64_encode($stringtoencode).'?=';
@@ -1254,15 +1262,17 @@ class CMailFile
 	/**
 	 * Return a formatted address string for SMTP protocol
 	 *
-	 * @param	string		$address		Example: 'John Doe <john@doe.com>, Alan Smith <alan@smith.com>' or 'john@doe.com, alan@smith.com'
-	 * @param	int			$format			0=auto, 1=emails with <>, 2=emails without <>, 3=auto + label between "
-	 * @param	int			$encode			1=Encode name to RFC2822
-	 * @return	string						If format 0: '<john@doe.com>' or 'John Doe <john@doe.com>' or '=?UTF-8?B?Sm9obiBEb2U=?= <john@doe.com>'
-	 * 										If format 1: '<john@doe.com>'
-	 *										If format 2: 'john@doe.com'
-	 *										If format 3: '<john@doe.com>' or '"John Doe" <john@doe.com>' or '"=?UTF-8?B?Sm9obiBEb2U=?=" <john@doe.com>'
+	 * @param	string		$address		     Example: 'John Doe <john@doe.com>, Alan Smith <alan@smith.com>' or 'john@doe.com, alan@smith.com'
+	 * @param	int			$format			     0=auto, 1=emails with <>, 2=emails without <>, 3=auto + label between "
+	 * @param	int			$encode			     0=No encode name, 1=Encode name to RFC2822
+	 * @param   int         $maxnumberofemail    0=No limit. Otherwise, maximum number of emails returned ($address may contains several email separated with ','). Add '...' if there is more. 
+	 * @return	string						     If format 0: '<john@doe.com>' or 'John Doe <john@doe.com>' or '=?UTF-8?B?Sm9obiBEb2U=?= <john@doe.com>'
+	 * 										     If format 1: '<john@doe.com>'
+	 *										     If format 2: 'john@doe.com'
+	 *										     If format 3: '<john@doe.com>' or '"John Doe" <john@doe.com>' or '"=?UTF-8?B?Sm9obiBEb2U=?=" <john@doe.com>'
+	 *                                           If format 4: 'John Doe' or 'john@doe.com' if no label exists
 	 */
-	function getValidAddress($address,$format,$encode='')
+	static function getValidAddress($address,$format,$encode=0,$maxnumberofemail=0)
 	{
 		global $conf;
 
@@ -1271,6 +1281,7 @@ class CMailFile
 		$arrayaddress=explode(',',$address);
 
 		// Boucle sur chaque composant de l'adresse
+		$i=0;
 		foreach($arrayaddress as $val)
 		{
 			if (preg_match('/^(.*)<(.*)>$/i',trim($val),$regs))
@@ -1286,7 +1297,13 @@ class CMailFile
 
 			if ($email)
 			{
+			    $i++;
+			    
 				$newemail='';
+				if ($format == 4)
+				{
+				    $newemail = $name?$name:$email;
+				}
 				if ($format == 2)
 				{
 					$newemail=$email;
@@ -1299,10 +1316,17 @@ class CMailFile
 				{
 					if (! empty($conf->global->MAIN_MAIL_NO_FULL_EMAIL)) $newemail='<'.$email.'>';
 					elseif (! $name) $newemail='<'.$email.'>';
-					else $newemail=($format==3?'"':'').($encode?$this->encodetorfc2822($name):$name).($format==3?'"':'').' <'.$email.'>';
+					else $newemail=($format==3?'"':'').($encode?self::encodetorfc2822($name):$name).($format==3?'"':'').' <'.$email.'>';
 				}
 
 				$ret=($ret ? $ret.',' : '').$newemail;
+				
+				// Stop if we have too much records
+				if ($maxnumberofemail && $i >= $maxnumberofemail)
+				{
+				    if (count($arrayaddress) > $maxnumberofemail) $ret.='...';
+				    break;
+				}
 			}
 		}
 

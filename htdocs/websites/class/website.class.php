@@ -85,6 +85,12 @@ class Website extends CommonObject
 	 * @var integer
 	 */
 	public $fk_default_home;
+	/**
+	 * @var string
+	 */
+	public $virtualhost;
+	
+	
 	public $records;
 	
 	/**
@@ -143,7 +149,8 @@ class Website extends CommonObject
 		$sql.= 'ref,';
 		$sql.= 'description,';
 		$sql.= 'status,';
-        $sql.= 'fk_default_home,';
+		$sql.= 'fk_default_home,';
+		$sql.= 'virtualhost,';
 		$sql.= 'date_creation,';
 		$sql.= 'date_modification';
 		
@@ -154,6 +161,7 @@ class Website extends CommonObject
 		$sql .= ' '.(! isset($this->description)?'NULL':"'".$this->db->escape($this->description)."'").',';
 		$sql .= ' '.(! isset($this->status)?'NULL':$this->status).',';
 		$sql .= ' '.(! isset($this->fk_default_home)?'NULL':$this->fk_default_home).',';
+		$sql .= ' '.(! isset($this->virtualhost)?'NULL':$this->virtualhost).',';
 		$sql .= ' '.(! isset($this->date_creation) || dol_strlen($this->date_creation)==0?'NULL':"'".$this->db->idate($this->date_creation)."'").',';
 		$sql .= ' '.(! isset($this->date_modification) || dol_strlen($this->date_modification)==0?'NULL':"'".$this->db->idate($this->date_modification)."'");
 
@@ -214,6 +222,7 @@ class Website extends CommonObject
 		$sql .= " t.description,";
 		$sql .= " t.status,";
 		$sql .= " t.fk_default_home,";
+		$sql .= " t.virtualhost,";
 		$sql .= " t.date_creation,";
 		$sql .= " t.date_modification,";
 		$sql .= " t.tms";
@@ -237,6 +246,7 @@ class Website extends CommonObject
 				$this->description = $obj->description;
 				$this->status = $obj->status;
 				$this->fk_default_home = $obj->fk_default_home;
+				$this->virtualhost = $obj->virtualhost;
 				$this->date_creation = $this->db->jdate($obj->date_creation);
 				$this->date_modification = $this->db->jdate($obj->date_modification);
 				$this->tms = $this->db->jdate($obj->tms);
@@ -276,16 +286,15 @@ class Website extends CommonObject
 
 		$sql = 'SELECT';
 		$sql .= ' t.rowid,';
-		
 		$sql .= " t.entity,";
 		$sql .= " t.ref,";
 		$sql .= " t.description,";
 		$sql .= " t.status,";
-		$sql .= " t.fk_default_home,"; 
+		$sql .= " t.fk_default_home,";
+		$sql .= " t.virtualhost,";
 		$sql .= " t.date_creation,";
 		$sql .= " t.date_modification,";
 		$sql .= " t.tms";
-		
 		$sql .= ' FROM ' . MAIN_DB_PREFIX . $this->table_element. ' as t';
 
 		// Manage filter
@@ -303,7 +312,7 @@ class Website extends CommonObject
 			$sql .= $this->db->order($sortfield,$sortorder);
 		}
 		if (!empty($limit)) {
-		 $sql .=  ' ' . $this->db->plimit($limit + 1, $offset);
+		 $sql .=  ' ' . $this->db->plimit($limit, $offset);
 		}
 		$this->records = array();
 
@@ -312,7 +321,7 @@ class Website extends CommonObject
 			$num = $this->db->num_rows($resql);
 
 			while ($obj = $this->db->fetch_object($resql)) {
-				$line = new WebsiteLine();
+				$line = new self($this->db);
 
 				$line->id = $obj->rowid;
 				
@@ -321,6 +330,7 @@ class Website extends CommonObject
 				$line->description = $obj->description;
 				$line->status = $obj->status;
 				$line->fk_default_home = $obj->fk_default_home;
+				$line->virtualhost = $obj->virtualhost;
 				$line->date_creation = $this->db->jdate($obj->date_creation);
 				$line->date_modification = $this->db->jdate($obj->date_modification);
 				$line->tms = $this->db->jdate($obj->tms);
@@ -550,7 +560,7 @@ class Website extends CommonObject
 
         if ($withpicto)
         {
-            $result.=($link.img_object(($notooltip?'':$label), 'label', ($notooltip?'':'class="classfortooltip"')).$linkend);
+            $result.=($link.img_object(($notooltip?'':$label), 'label', ($notooltip?'':'class="classfortooltip"'), 0, 0, $notooltip?0:1).$linkend);
             if ($withpicto != 2) $result.=' ';
 		}
 		$result.= $link . $this->ref . $linkend;
@@ -628,6 +638,7 @@ class Website extends CommonObject
 		$this->description = 'A specimen website';
 		$this->status = '';
 		$this->fk_default_home = null;
+		$this->virtualhost = 'http://myvirtualhost';
 		$this->date_creation = dol_now();
 		$this->date_modification = dol_now();
 		$this->tms = dol_now();
@@ -637,46 +648,3 @@ class Website extends CommonObject
 
 }
 
-/**
- * Class WebsiteLine
- */
-class WebsiteLine
-{
-	/**
-	 * @var int ID
-	 */
-	public $id;
-	/**
-	 * @var int
-	 */
-	public $entity;
-	/**
-	 * @var string
-	 */
-	public $ref;
-	/**
-	 * @var string
-	 */
-	public $description;
-	/**
-	 * @var int
-	 */
-	public $status;
-	/**
-	 * @var int
-	 */
-	public $fk_default_home;
-	/**
-	 * @var mixed
-	 */
-	public $date_creation;
-	/**
-	 * @var mixed
-	 */
-	public $date_modification;
-	/**
-	 * @var mixed
-	 */
-	public $tms = '';
-	
-}

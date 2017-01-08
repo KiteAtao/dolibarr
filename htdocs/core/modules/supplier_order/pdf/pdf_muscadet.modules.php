@@ -573,8 +573,6 @@ class pdf_muscadet extends ModelePDFSuppliersOrders
 			$this->error=$langs->trans("ErrorConstantNotDefined","SUPPLIER_OUTPUTDIR");
 			return 0;
 		}
-		$this->error=$langs->trans("ErrorUnknown");
-		return 0;   // Erreur par defaut
 	}
 
 
@@ -1105,6 +1103,19 @@ class pdf_muscadet extends ModelePDFSuppliersOrders
 			$pdf->MultiCell(100, 3, $outputlangs->transnoentities("SupplierCode")." : " . $outputlangs->transnoentities($object->thirdparty->code_fournisseur), '', 'R');
 		}
 
+		// Get contact
+		if (!empty($conf->global->DOC_SHOW_FIRST_SALES_REP))
+		{
+    		$arrayidcontact=$object->getIdContact('internal','SALESREPFOLL');
+    		if (count($arrayidcontact) > 0)
+    		{
+    		    $usertmp=new User($this->db);
+    		    $usertmp->fetch($arrayidcontact[0]);
+    		    $pdf->SetTextColor(0,0,60);
+    		    $pdf->MultiCell(190, 3, $langs->trans("BuyerName")." : ".$usertmp->getFullName($langs), '', 'R');
+    		}
+		}
+		
 		$posy+=1;
 		$pdf->SetTextColor(0,0,60);
 

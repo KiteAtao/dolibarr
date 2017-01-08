@@ -106,7 +106,7 @@ function dol_print_cron_urls()
 	print '<u>'.$langs->trans("FileToLaunchCronJobs").':</u><br>';
 
 	$file='/scripts/cron/cron_run_jobs.php'.' '.(empty($conf->global->CRON_KEY)?'securitykey':''.$conf->global->CRON_KEY.'').' '.$logintouse.' [cronjobid]';
-	print '<textarea rows="'.ROWS_2.'" cols="120">..'.$file."</textarea><br>\n";
+	print '<textarea class="quatrevingtpercent">..'.$file."</textarea><br>\n";
 	print '<br>';
 
 	// Add note
@@ -118,7 +118,7 @@ function dol_print_cron_urls()
 	{
 		print $langs->trans("CronExplainHowToRunUnix");
 		print '<br>';
-		print '<textarea rows="'.ROWS_1.'" style="width:80%">*/5 * * * * pathtoscript/scripts/cron/cron_run_jobs.php '.(empty($conf->global->CRON_KEY)?'securitykey':''.$conf->global->CRON_KEY.'').' '.$logintouse.' &gt; '.DOL_DATA_ROOT.'/cron_run_jobs.php.log</textarea><br>';
+		print '<textarea class="quatrevingtpercent">*/5 * * * * pathtoscript/scripts/cron/cron_run_jobs.php '.(empty($conf->global->CRON_KEY)?'securitykey':''.$conf->global->CRON_KEY.'').' '.$logintouse.' &gt; '.DOL_DATA_ROOT.'/cron_run_jobs.php.log</textarea><br>';
 	}
 	else
 	{

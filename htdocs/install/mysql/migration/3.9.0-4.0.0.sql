@@ -202,7 +202,7 @@ ALTER TABLE llx_extrafields ADD COLUMN ishidden integer DEFAULT 0;
 
 
 ALTER TABLE llx_paiementfourn ADD COLUMN ref varchar(30) AFTER rowid;
-ALTER TABLE llx_paiementfourn ADD COLUMN entity integer AFTER ref;
+ALTER TABLE llx_paiementfourn ADD COLUMN entity integer DEFAULT 1 AFTER ref;
 
 
 CREATE TABLE llx_multicurrency 
@@ -333,6 +333,9 @@ ALTER TABLE llx_paiement_facture ADD COLUMN multicurrency_amount double(24,8) DE
 ALTER TABLE llx_paiementfourn ADD COLUMN multicurrency_amount double(24,8) DEFAULT 0;
 ALTER TABLE llx_paiementfourn_facturefourn ADD COLUMN multicurrency_amount double(24,8) DEFAULT 0;
 
+ALTER TABLE llx_societe_remise ADD COLUMN entity integer DEFAULT 1 NOT NULL AFTER rowid;
+
+ALTER TABLE llx_societe_remise_except ADD COLUMN entity integer DEFAULT 1 NOT NULL AFTER rowid;
 ALTER TABLE llx_societe_remise_except ADD COLUMN multicurrency_amount_ht double(24,8) DEFAULT 0 NOT NULL;
 ALTER TABLE llx_societe_remise_except ADD COLUMN multicurrency_amount_tva double(24,8) DEFAULT 0 NOT NULL;
 ALTER TABLE llx_societe_remise_except ADD COLUMN multicurrency_amount_ttc double(24,8) DEFAULT 0 NOT NULL;
@@ -502,7 +505,7 @@ CREATE TABLE llx_oauth_token (
     token text,
     fk_user integer,
     fk_adherent integer,
-    entity integer
+    entity integer DEFAULT 1
 )ENGINE=InnoDB;
 
 CREATE TABLE llx_oauth_state (
@@ -511,7 +514,7 @@ CREATE TABLE llx_oauth_state (
     state varchar(128),
     fk_user integer,
     fk_adherent integer,
-    entity integer
+    entity integer DEFAuLT 1
 )ENGINE=InnoDB;
 
 -- At end (higher risk of error)
